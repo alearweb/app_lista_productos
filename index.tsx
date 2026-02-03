@@ -1,9 +1,1 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App.tsx';
-
-const rootElement = document.getElementById('root');
-if (rootElement) {
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(<App />);
-}
+// Este archivo ya no es necesario, la lógica está en App.tsx para evitar errores de ESM en el navegador.
