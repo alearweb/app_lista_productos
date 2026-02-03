@@ -1,145 +1,121 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ShoppingItem } from './types.ts';
 import Header from './components/Header.tsx';
 import ItemRow from './components/ItemRow.tsx';
 import AddItemForm from './components/AddItemForm.tsx';
 
-const STORAGE_KEY = 'superlist_offline_data_v3';
-
-const DEFAULT_ITEMS: string[] = [
-  "Arroz", "Atun", "Frijol", "Sal", "Azucar", "Aceite", "Café", "Leche", "Pan", "Huevos"
-];
-
+// --- COMPONENTE PRINCIPAL: APP ---
 const App: React.FC = () => {
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
 
+  // Fix: Initialize state from localStorage or use defaults on first load
   useEffect(() => {
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    setIsStandalone(isPWA);
-
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem('superlist_data_v4');
     if (saved) {
       try {
         setItems(JSON.parse(saved));
       } catch (e) {
-        console.error("Error al cargar datos", e);
+        console.error("Failed to parse saved data", e);
       }
     } else {
-      const initialItems: ShoppingItem[] = DEFAULT_ITEMS.map((name, index) => ({
-        id: `def-${index}-${Date.now()}`,
-        name,
-        bought: false,
-        quantity: 1,
-        unitPrice: 0,
-      }));
-      setItems(initialItems);
+      setItems(["Arroz", "Frijoles", "Leche", "Huevos"].map((n, i) => ({
+        id: String(Date.now() + i), 
+        name: n, 
+        bought: false, 
+        quantity: 1, 
+        unitPrice: 0 
+      })));
     }
     setIsLoaded(true);
 
-    window.addEventListener('beforeinstallprompt', (e) => {
+    // Fix: Basic PWA event listener for installation prompts
+    const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
-      setDeferredPrompt(e);
-    });
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
+  // Fix: Sync local state with localStorage for persistence
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem('superlist_data_v4', JSON.stringify(items));
     }
   }, [items, isLoaded]);
 
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') setDeferredPrompt(null);
-    } else {
-      alert("Instrucciones para Android:\n1. Toca los 3 puntos (⋮).\n2. Selecciona 'Instalar aplicación'.");
-    }
-  };
-
-  const addItem = useCallback((name: string) => {
-    const newItem: ShoppingItem = {
-      id: Date.now().toString(),
-      name,
-      bought: false,
-      quantity: 1,
-      unitPrice: 0,
+  // Fix: Logical function to add items to the list
+  const addItem = (name: string) => {
+    if (!name.trim()) return;
+    const newItem: ShoppingItem = { 
+      id: String(Date.now()), 
+      name, 
+      bought: false, 
+      quantity: 1, 
+      unitPrice: 0 
     };
     setItems(prev => [newItem, ...prev]);
     setSearchTerm('');
-  }, []);
+  };
 
-  const updateItem = useCallback((id: string, updates: Partial<ShoppingItem>) => {
-    setItems(prev => prev.map(item => 
-      item.id === id ? { ...item, ...updates } : item
-    ));
-  }, []);
+  // Fix: Memoized filtering to optimize performance
+  const filteredItems = useMemo(() => 
+    items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())), 
+  [items, searchTerm]);
 
-  const removeItem = useCallback((id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
-  }, []);
-
-  const filteredItems = useMemo(() => {
-    if (!searchTerm.trim()) return items;
-    const term = searchTerm.toLowerCase();
-    return items.filter(item => item.name.toLowerCase().includes(term));
-  }, [items, searchTerm]);
-
+  // Fix: Calculate totals based on bought state
   const boughtItems = useMemo(() => items.filter(i => i.bought), [items]);
-  const totalCost = useMemo(() => {
-    return boughtItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  }, [boughtItems]);
+  const total = useMemo(() => boughtItems.reduce((s, i) => s + (i.quantity * i.unitPrice), 0), [boughtItems]);
 
   return (
-    <div className="min-h-screen flex flex-col max-w-2xl mx-auto pb-40">
+    <div className="min-h-screen bg-slate-50 flex flex-col max-w-2xl mx-auto pb-40">
+      {/* Header component handling search and summary progress */}
       <Header 
-        total={totalCost} 
+        total={total} 
         totalItems={items.length} 
         boughtCount={boughtItems.length} 
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
+        searchTerm={searchTerm} 
+        setSearchTerm={setSearchTerm} 
       />
       
       <main className="p-4 space-y-4">
-        {!isStandalone && (
-          <div className="bg-indigo-600 text-white p-6 rounded-[2rem] shadow-lg mb-6">
-            <h2 className="text-lg font-black mb-1 uppercase tracking-tight">📲 Instalar Aplicación</h2>
-            <p className="text-xs font-bold opacity-90 mb-4">Para usarla sin internet y tener el icono en tu pantalla.</p>
-            <button 
-              onClick={handleInstallClick}
-              className="w-full bg-white text-indigo-600 font-black py-3 rounded-xl shadow-md active:scale-95 transition-transform uppercase text-xs"
-            >
-              Instalar Ahora
-            </button>
-          </div>
-        )}
-
+        {/* Modular form to add new items */}
         <AddItemForm onAdd={addItem} />
 
+        {/* List display area */}
         <div className="space-y-3">
           {filteredItems.map((item, index) => (
             <ItemRow 
               key={item.id} 
               item={item} 
               index={index}
-              onUpdate={updateUpdate => updateItem(item.id, updateUpdate)}
-              onRemove={() => removeItem(item.id)}
+              onUpdate={(upd) => setItems(prev => prev.map(i => i.id === item.id ? {...i, ...upd} : i))}
+              onRemove={() => setItems(prev => prev.filter(i => i.id !== item.id))}
             />
           ))}
+          
+          {/* Empty state messaging */}
+          {filteredItems.length === 0 && (
+            <div className="text-center py-16 px-4">
+              <div className="text-5xl mb-4 opacity-20">🛒</div>
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">
+                {searchTerm ? 'No hay resultados' : 'Lista vacía'}
+              </p>
+            </div>
+          )}
         </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 z-50 rounded-t-[2rem] safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+      {/* Persistent footer with purchase summary */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-lg border-t border-slate-200 z-50 rounded-t-[2.5rem] shadow-2xl max-w-2xl mx-auto">
         <button 
-          className={`w-full font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 ${boughtItems.length > 0 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400'}`}
+          onClick={() => alert("Resumen de compra:\nTotal: ₡" + total.toLocaleString('es-CR'))}
+          className={`w-full font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 flex justify-between px-8 items-center ${boughtItems.length > 0 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400'}`}
         >
-          RESUMEN: ₡{totalCost.toLocaleString()}
+          <span className="text-xs uppercase opacity-80 font-bold tracking-tight">Finalizar Compra</span>
+          <span className="text-xl">₡{total.toLocaleString('es-CR')}</span>
         </button>
       </div>
     </div>

@@ -12,27 +12,13 @@
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3523/3523887.png">
     <title>SuperList Offline</title>
     
-    <!-- Tailwind para estilos -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Babel Standalone: Permite ejecutar .tsx directamente en el navegador -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        :root {
-          --sat: env(safe-area-inset-top);
-          --sar: env(safe-area-inset-right);
-          --sab: env(safe-area-inset-bottom);
-          --sal: env(safe-area-inset-left);
-        }
-        body {
-            -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: contain;
-            background-color: #f8fafc;
-        }
-        .safe-area-bottom {
-            padding-bottom: calc(1rem + var(--sab));
-        }
+        :root { --sab: env(safe-area-inset-bottom); }
+        body { -webkit-tap-highlight-color: transparent; background-color: #f8fafc; margin: 0; padding: 0; }
+        #error-display { display: none; position: fixed; top: 0; left: 0; right: 0; background: #fee2e2; color: #b91c1c; padding: 20px; z-index: 9999; font-family: monospace; font-size: 12px; border-bottom: 2px solid #ef4444; }
     </style>
 
     <script type="importmap">
@@ -40,34 +26,47 @@
   "imports": {
     "react": "https://esm.sh/react@19.0.0",
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/"
   }
 }
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="text-slate-900 font-sans">
-    <div id="root"></div>
+<body>
+    <!-- Pantalla de Error (solo visible si algo falla) -->
+    <div id="error-display">
+        <strong>Error de carga:</strong> <span id="error-msg"></span>
+        <br><br>
+        <button onclick="location.reload()" style="background:#ef4444; color:white; padding:5px 10px; border-radius:5px">Reintentar</button>
+    </div>
 
-    <!-- Cargamos el punto de entrada usando Babel -->
-    <script type="text/babel" data-type="module" data-presets="typescript,react">
+    <div id="root">
+        <!-- Pantalla de carga inicial -->
+        <div class="min-h-screen flex items-center justify-center flex-col gap-4">
+            <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-indigo-600 font-bold animate-pulse">Iniciando SuperList...</p>
+        </div>
+    </div>
+
+    <script>
+        // Capturador de errores global
+        window.onerror = function(msg, url, line) {
+            document.getElementById('error-display').style.display = 'block';
+            document.getElementById('error-msg').textContent = msg + " (Línea: " + line + ")";
+        };
+    </script>
+
+    <!-- Carga del código usando Babel -->
+    <script type="text/babel" data-presets="typescript,react">
+        // Importación directa para que Babel procese todo
         import './index.tsx';
     </script>
 
     <script>
-      // Registro del Service Worker para modo offline
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          const swPath = window.location.pathname.includes('github.io') 
-            ? window.location.pathname.split('/').slice(0, -1).join('/') + '/sw.js'
-            : './sw.js';
-            
-          navigator.serviceWorker.register(swPath).then(reg => {
-            console.log('✅ Service Worker activo');
-          }).catch(err => {
-            console.error('❌ Error SW:', err);
-          });
+          navigator.serviceWorker.register('./sw.js').catch(console.error);
         });
       }
     </script>
