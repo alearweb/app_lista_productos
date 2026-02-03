@@ -12,23 +12,11 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ total, totalItems, boughtCount, searchTerm, setSearchTerm }) => {
   const percentage = totalItems > 0 ? Math.round((boughtCount / totalItems) * 100) : 0;
 
-  const showHelp = () => {
-    alert("Para instalar en tu celular:\n\n1. Abre esto en Chrome.\n2. Toca los 3 puntos (⋮) arriba a la derecha.\n3. Selecciona 'Instalar aplicación' o 'Añadir a pantalla de inicio'.\n\n¡Listo! Funcionará 100% sin internet.");
-  };
-
   return (
     <header className="sticky top-0 z-40 bg-indigo-600 text-white p-5 shadow-xl rounded-b-[2.5rem]">
-      <div className="flex justify-between items-start mb-4">
+      <div className="flex justify-between items-end mb-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-xl font-black tracking-tighter leading-none">SUPERLIST</h1>
-            <button 
-              onClick={showHelp}
-              className="bg-white/20 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold"
-            >
-              ?
-            </button>
-          </div>
+          <h1 className="text-xl font-black tracking-tighter leading-none mb-1">SUPERLIST</h1>
           <p className="text-indigo-200 text-[11px] font-bold uppercase tracking-wider">
             {boughtCount} / {totalItems} LISTO
           </p>
