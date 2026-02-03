@@ -11,7 +11,13 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3523/3523887.png">
     <title>SuperList Offline</title>
+    
+    <!-- Tailwind para estilos -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Babel Standalone: Permite ejecutar .tsx directamente en el navegador -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <style>
         :root {
           --sat: env(safe-area-inset-top);
@@ -22,42 +28,45 @@
         body {
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: contain;
-            padding-bottom: var(--sab);
+            background-color: #f8fafc;
         }
         .safe-area-bottom {
             padding-bottom: calc(1rem + var(--sab));
         }
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type="text"], input[type="number"] {
-            font-size: 16px !important;
-        }
     </style>
-<script type="importmap">
+
+    <script type="importmap">
 {
   "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
     "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
   }
 }
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="bg-slate-50 text-slate-900 font-sans">
+<body class="text-slate-900 font-sans">
     <div id="root"></div>
-    <!-- Carga de la aplicación principal -->
-    <script type="module" src="index.tsx"></script>
+
+    <!-- Cargamos el punto de entrada usando Babel -->
+    <script type="text/babel" data-type="module" data-presets="typescript,react">
+        import './index.tsx';
+    </script>
+
     <script>
+      // Registro del Service Worker para modo offline
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js').then(reg => {
-            console.log('SW registrado', reg);
+          const swPath = window.location.pathname.includes('github.io') 
+            ? window.location.pathname.split('/').slice(0, -1).join('/') + '/sw.js'
+            : './sw.js';
+            
+          navigator.serviceWorker.register(swPath).then(reg => {
+            console.log('✅ Service Worker activo');
           }).catch(err => {
-            console.log('Error al registrar SW', err);
+            console.error('❌ Error SW:', err);
           });
         });
       }
